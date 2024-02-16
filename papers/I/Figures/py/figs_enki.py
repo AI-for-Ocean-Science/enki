@@ -2,7 +2,6 @@
 import os, sys
 import numpy as np
 import scipy
-from pkg_resources import resource_filename
 
 import xarray
 
@@ -12,8 +11,6 @@ from matplotlib import pyplot as plt
 
 
 from cartopy.mpl.gridliner import LONGITUDE_FORMATTER, LATITUDE_FORMATTER
-import cartopy.crs as ccrs
-import cartopy
 
 mpl.rcParams['font.family'] = 'stixgeneral'
 
@@ -23,19 +20,20 @@ import seaborn as sns
 import h5py
 
 from ulmo import plotting
-from ulmo.mae import enki_utils
-from ulmo.mae import patch_analysis
-from ulmo.mae import plotting as enki_plotting
-from ulmo.mae.cutout_analysis import rms_images
 from ulmo import io as ulmo_io
 from ulmo.utils import image_utils
+
+from enki import utils
+from enki import patch_analysis
+from enki import plotting as enki_plotting
+from enki.cutout_analysis import rms_images
+
 try:
-    from ulmo.mae import models_mae
+    from enki import models_mae
 except (ModuleNotFoundError, ImportError):
     print("Not able to load the models")
 else:    
-    from ulmo.mae import reconstruct
-from ulmo.mae import plotting as mae_plotting
+    from enki import reconstruct
 
 
 from IPython import embed
@@ -68,15 +66,15 @@ def fig_reconstruct(outfile:str='fig_reconstruct.png', t:int=20,
                     p:int=30, patch_sz:int=4):
 
     # Load
-    tbl_file, orig_file, recon_file, mask_file = enki_utils.set_files(
-        'LLC2_nonoise', 20, 30)
+    tbl_file, orig_file, recon_file, mask_file = utils.set_files(
+        'LLC2_nonoise', t, p)
 
     print(f"Orig: {orig_file}")
     print(f"Recon: {recon_file}")
     print(f"Mask: {mask_file}")
 
     tbl = ulmo_io.load_main_table(tbl_file)
-    bias = enki_utils.load_bias((t,p))
+    bias = utils.load_bias((t,p))
 
     # Pick one
     #LL = 1. # Pretty nice
@@ -116,6 +114,68 @@ def fig_reconstruct(outfile:str='fig_reconstruct.png', t:int=20,
 
     print(f'Residual max: {max_res:.3f}, RMSE max: {max_rmse:.3f}, Average RMSE: {np.mean(results["std_diff"]):.3f}')
 
+def fig_viirs_reconstruct(outfile:str='fig_viirs_reconstruct.png', t:int=20, 
+                    p:int=40):
+
+    # Load
+    tbl_file, orig_file, recon_file, mask_file = utils.set_files(
+        'VIIRS', t, p)
+
+
+    print(f"Orig: {orig_file}")
+    print(f"Recon: {recon_file}")
+    print(f"Mask: {mask_file}")
+
+    embed(header='131 of figs')
+    tbl = ulmo_io.load_main_table(tbl_file)
+    bias = utils.load_bias((t,p))
+
+    # Pick one
+    #LL = 1. # Pretty nice
+    LL = 2. # Rather good
+    #LL = 100. # Too many along the edge
+    LL = 105. # Quite nice
+
+    LLs = [2, 105.]
+
+    fig = plt.figure(figsize=(12,7))
+    gs = gridspec.GridSpec(2,4)
+
+    for ss, LL in enumerate(LLs):
+
+        imin = np.argmin(np.abs(tbl.LL - LL))
+        cutout = tbl.iloc[imin]
+
+
+        f_orig = h5py.File(orig_file, 'r')
+        f_recon = h5py.File(recon_file, 'r')
+        f_mask = h5py.File(mask_file, 'r')
+
+        orig_img = f_orig['valid'][cutout.pp_idx, 0, :, :]
+        recon_img = f_recon['valid'][cutout.pp_idx, 0, :, :]
+        mask_img = f_mask['valid'][cutout.pp_idx, 0, :, :]
+
+        if ss == 0:
+            gss = [gs[ii] for ii in range(4)]
+            show_cb = True
+            show_title = False
+        else:
+            gss = [gs[ii] for ii in range(4,8)]
+            show_cb = False
+            show_title = True
+
+        # Figure time
+        enki_plotting.plot_recon_four(orig_img, recon_img, mask_img, 
+                                bias=bias, 
+                                show_cbars=show_cb,
+                                show_title=show_title,
+                                res_vmnx=(-0.2,0.2),
+                                gs=gss)
+
+    plt.tight_layout(pad=0.5, h_pad=0.5, w_pad=0.5)
+    plt.savefig(outfile, dpi=300)
+    plt.close()
+    print('Wrote {:s}'.format(outfile))
 
 def fig_patches(outfile:str, patch_file:str, model:str='std'):
     print(f"Using: {patch_file}")
@@ -123,23 +183,26 @@ def fig_patches(outfile:str, patch_file:str, model:str='std'):
 
     fig = plt.figure(figsize=(12,7))
     plt.clf()
-    gs = gridspec.GridSpec(4,8)
+    #gs = gridspec.GridSpec(4,8)
 
+    '''
     # Spatial
     ax0 = plt.subplot(gs[:,0:4])
     fig_patch_ij_binned_stats('std_diff', 'median',
                               patch_file, in_ax=ax0)
     ax0.set_title('(a)', fontsize=lsz, color='k', loc='left')
+    '''
+    # Spatial
 
     # RMSE
-    ax1 = fig_patch_rmse(patch_file, in_ax=gs, model=model)
-    ax1.set_title('(b)', fontsize=lsz, color='k', loc='left')
+    ax1 = fig_patch_rmse(patch_file, model=model, outfile=outfile)
+    #ax1.set_title('(b)', fontsize=lsz, color='k', loc='left')
 
     # Finish
-    plt.tight_layout(pad=0.0, h_pad=0.0, w_pad=0.3)
-    plt.savefig(outfile, dpi=300)
-    plt.close()
-    print('Wrote {:s}'.format(outfile))
+    #plt.tight_layout(pad=0.0, h_pad=0.0, w_pad=0.3)
+    #plt.savefig(outfile, dpi=300)
+    #plt.close()
+    #print('Wrote {:s}'.format(outfile))
 
 
 def fig_cutouts(outfile:str):
@@ -179,7 +242,7 @@ def fig_patch_ij_binned_stats(metric:str,
     """
 
     # Parse
-    t_per, p_per = enki_utils.parse_enki_file(patch_file)
+    t_per, p_per = utils.parse_enki_file(patch_file)
 
     # Outfile
     outfile = f'fig_{metric}_{stat}_t{t_per}_p{p_per}_patch_ij_binned_stats.png'
@@ -201,7 +264,7 @@ def fig_patch_ij_binned_stats(metric:str,
     #stat = 'mean'
     #stat = 'std'
 
-    values, lbl = enki_utils.parse_metric(
+    values, lbl = utils.parse_metric(
         tbl, metric)
 
     # Do it
@@ -258,7 +321,7 @@ def fig_patch_rmse(patch_file:str, in_ax=None, outfile:str=None,
 
     # Parse
     if tp is None:
-        t_per, p_per = enki_utils.parse_enki_file(patch_file)
+        t_per, p_per = utils.parse_enki_file(patch_file)
     else:
         t_per, p_per = tp
 
@@ -404,7 +467,7 @@ def fig_viirs_example(outfile:str, t:int, idx:int=0):
     plt.clf()
     gs = gridspec.GridSpec(1,3)
 
-    mae_plotting.plot_recon(np_y, np_x, np_mask, gs=gs,
+    enki_plotting.plot_recon(np_y, np_x, np_mask, gs=gs,
                             res_vmnx=(-0.2,0.2))
 
     # Finish
@@ -437,8 +500,8 @@ def fig_llc_inpainting(outfile:str, t:int, p:int,
     inpaint_file = os.path.join(
         ogcm_path, 'LLC', 'Enki', 
         'Recon', f'Enki_LLC2_nonoise_biharmonic_t{t}_p{p}.h5')
-    recon_file = enki_utils.img_filename(t,p, local=True, dataset='LLC2_nonoise')
-    mask_file = enki_utils.mask_filename(t,p, local=True, dataset='LLC2_nonoise')
+    recon_file = utils.img_filename(t,p, local=True, dataset='LLC2_nonoise')
+    mask_file = utils.mask_filename(t,p, local=True, dataset='LLC2_nonoise')
 
     # Load up
     enki_tbl = ulmo_io.load_main_table(local_enki_table)
@@ -508,8 +571,10 @@ def fig_llc_inpainting(outfile:str, t:int, p:int,
     # RMS_biharmonic vs. RMS_Enki
     if single:
         ax2 = plt.subplot(gs[0])
+        fsz = 19.
     else:
         ax2 = plt.subplot(gs[3])
+        fsz = 15.
     #embed(header='429 of figs')
     scat = ax2.scatter(enki_tbl.rms_enki, 
                 enki_tbl.rms_inpaint, s=0.1,
@@ -523,6 +588,11 @@ def fig_llc_inpainting(outfile:str, t:int, p:int,
     #cbaxes.set_label(r'$\log_{10} \, \Delta T$ (K)', fontsize=17.)
     cbaxes.set_label(r'$LL_{\rm Ulmo}$', fontsize=17.)
     cbaxes.ax.tick_params(labelsize=15)
+    ax2.text(0.95, 0.05, stper+f'={t}, '+smper+f'={p}',
+            transform=ax2.transAxes,
+              fontsize=fsz, ha='right', color='k')
+
+    # t,m
 
     ax2.plot([1e-3, 1], [1e-3,1], 'k--')
     axes.append(ax2)
@@ -552,7 +622,7 @@ def fig_llc_inpainting(outfile:str, t:int, p:int,
 
     # Polish
     #fg.ax.minorticks_on()
-    lsz = 17 if single else 14
+    lsz = 21 if single else 14
     for ax in axes:
         plotting.set_fontsize(ax, lsz)
 
@@ -736,14 +806,14 @@ def fig_viirs_rmse(outfile='fig_viirs_rmse.png',
         y_llc_quad = np.sqrt(np.array(y_llc)**2 + 0.03**2)
         plt.scatter(x_llc, y_llc_quad, marker='o', color='r', label='LLC Enki + VIIRS noise')
         
-    fsz = 17
+    fsz = 21
     plt.legend(title_fontsize=fsz+1, fontsize=fsz, 
                fancybox=True)
     #plt.title('Training Percentile: t={}'.format(models[i]))
     plt.xlabel(r"Median $LL_{\rm Ulmo}$")
     plt.ylabel("Average RMSE (K)")
 
-    plotting.set_fontsize(ax, 19)
+    plotting.set_fontsize(ax, fsz)
     ax.grid(color='gray', linestyle='dashed', linewidth = 0.5)
     #plt.title(f't={t}, p={p}')
                          
@@ -937,10 +1007,23 @@ def fig_dineof(outfile='fig_dineof.png'):
 
         return simple_rmse(recon_imgs, mask_imgs)
 
+    def rmse_biharm(p):
+        enki_file = os.path.join(os.getenv('OS_OGCM'), 'LLC', 'Enki', 'DINEOF',
+            f'Enki_LLC_DINEOF_enki_p{p}.nc')
+        mask_file = enki_file.replace('enki', 'mask')
+        f_mask = h5py.File(mask_file, 'r')
+        mask_imgs = np.asarray(f_mask['valid'][:,0,...])
+
+        embed(header='948 of figs')
+
+        return simple_rmse(recon_imgs, mask_imgs)
+
     rmses = []
     enki_rmses = []
+    biharm_rmses = []
     ps = [10, 20, 30, 40, 50]
     for p in ps:
+        biharm_rmses.append(rmse_biharm(p))
         rmses.append(rmse_DINEOF(p))
         enki_rmses.append(rmse_enki(p))
     
@@ -980,11 +1063,13 @@ def main(flg_fig):
     if flg_fig & (2 ** 0):
         #fig_patches('fig_patches_t10_p20.png',
         #            'enki_patches_t10_p20.npz')
-        fig_patches('fig_patches_t20_p30.png',
-                    'enki_patches_t20_p30.npz')
+        #fig_patches('fig_patches_t20_p30.png',
+        #            'enki_patches_t20_p30.npz')
         #fig_patches('fig_patches_t10_p20_denom.png',
         #            'mae_patches_t10_p20.npz',
         #            model='denom')
+        fig_patches('fig_rmse_patches.png',
+                    'enki_patches_t20_p30.npz')
 
     # Cutouts
     if flg_fig & (2 ** 1):
@@ -1052,6 +1137,10 @@ def main(flg_fig):
     if flg_fig & (2 ** 8):
         fig_dineof()
 
+    # VIIRS Reconstructions
+    if flg_fig & (2 ** 9):
+        fig_viirs_reconstruct()
+
 
 # Command line execution
 if __name__ == '__main__':
@@ -1060,13 +1149,14 @@ if __name__ == '__main__':
         flg_fig = 0
         #flg_fig += 2 ** 0  # patches
         #flg_fig += 2 ** 1  # cutouts
-        #flg_fig += 2 ** 2  # LLC RMSE (Enki vs inpainting)
-        #flg_fig += 2 ** 3  # Reconstruction example
+        #flg_fig += 2 ** 2  # LLC RMSE (Enki vs inpainting) [Figure 4]
+        flg_fig += 2 ** 3  # Reconstruction example
         #flg_fig += 2 ** 4  # VIIRS RMSE vs LL (Figure 5)
         #flg_fig += 2 ** 5  # Check valid 2
-        flg_fig += 2 ** 6  # More patch figures
+        #flg_fig += 2 ** 6  # More patch figures
         #flg_fig += 2 ** 7  # Compare Enki against many inpainting
         #flg_fig += 2 ** 8  # DINEOF
+        #flg_fig += 2 ** 9  # VIIRS Reconstructions
     else:
         flg_fig = sys.argv[1]
 
