@@ -972,11 +972,17 @@ def fig_dineof(outfile='fig_dineof.png',
                              'Enki_LLC_orig.nc')
     ds_orig = xarray.open_dataset(orig_file)
     orig_imgs = np.asarray(ds_orig.variables['SST'])
+    patch_sz=4
 
-    def simple_rmse(recon_imgs, mask_imgs):
-        calc = (recon_imgs - orig_imgs)*mask_imgs
+    def simple_rmse(recon_imgs, mask_imgs, 
+                    patch_sz:int=4):
+        crecon_imgs = recon_imgs[:,patch_sz:-patch_sz, patch_sz:-patch_sz]
+        cmask_imgs  = mask_imgs[:,patch_sz:-patch_sz, patch_sz:-patch_sz]
+        corig_imgs  = orig_imgs[:,patch_sz:-patch_sz, patch_sz:-patch_sz]
+
+        calc = (crecon_imgs - corig_imgs)*cmask_imgs
         calc = calc**2
-        nmask = np.sum(mask_imgs, axis=(1,2))
+        nmask = np.sum(cmask_imgs, axis=(1,2))
         calc = np.sum(calc, axis=(1,2)) / nmask
         rmse = np.sqrt(calc)
         return np.mean(rmse)
@@ -1165,11 +1171,11 @@ if __name__ == '__main__':
         #flg_fig += 2 ** 1  # cutouts
         #flg_fig += 2 ** 2  # LLC RMSE (Enki vs inpainting) [Figure 4]
         #flg_fig += 2 ** 3  # Reconstruction example
-        flg_fig += 2 ** 4  # VIIRS RMSE vs LLC
+        #flg_fig += 2 ** 4  # VIIRS RMSE vs LLC
         #flg_fig += 2 ** 5  # Check valid 2
         #flg_fig += 2 ** 6  # More patch figures
         #flg_fig += 2 ** 7  # Compare Enki against many inpainting
-        #flg_fig += 2 ** 8  # DINEOF
+        flg_fig += 2 ** 8  # DINEOF
         #flg_fig += 2 ** 9  # VIIRS Reconstructions
     else:
         flg_fig = sys.argv[1]
