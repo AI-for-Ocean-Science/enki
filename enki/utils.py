@@ -1,6 +1,6 @@
 """ Utility methods for Enki """
 
-from pkg_resources import resource_filename
+from importlib import resources 
 
 import os
 import numpy as np
@@ -20,7 +20,7 @@ def load_bias(tp:tuple=None, bias_path:str=None, dataset:str='LLC2_nonoise'):
     if bias_path is None:
         if dataset == 'VIIRS':
             dataset = 'LLC2_nonoise'
-        bias_path = os.path.join(resource_filename('ulmo', 'runs'), 
+        bias_path = os.path.join(resources.files('enki'), 'runs',
             'Enki', 'Masters', f'enki_bias_{dataset}.csv')
     # Load
     print(f"Loading bias table from {bias_path}")

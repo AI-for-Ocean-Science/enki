@@ -17,10 +17,8 @@ import numpy as np
 import h5py
 from typing import Iterable
 
-import ulmo.enki.util.misc as misc
-from ulmo.enki import models_mae
-import ulmo.enki.util.lr_sched as lr_sched
-from ulmo.enki.util.hdfstore import HDF5Store
+import enki.util.misc as misc
+from enki.util.hdfstore import HDF5Store
 
 from IPython import embed
 
