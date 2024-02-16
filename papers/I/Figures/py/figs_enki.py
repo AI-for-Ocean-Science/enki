@@ -972,7 +972,6 @@ def fig_dineof(outfile='fig_dineof.png',
                              'Enki_LLC_orig.nc')
     ds_orig = xarray.open_dataset(orig_file)
     orig_imgs = np.asarray(ds_orig.variables['SST'])
-    patch_sz=4
 
     def simple_rmse(recon_imgs, mask_imgs, 
                     patch_sz:int=4):
