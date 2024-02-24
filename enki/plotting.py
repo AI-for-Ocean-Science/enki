@@ -9,7 +9,7 @@ from matplotlib.patches import Rectangle
 import seaborn as sns
 
 from ulmo import plotting
-from ulmo.enki import patch_analysis
+from enki import patch_analysis
 
 from IPython import embed
 

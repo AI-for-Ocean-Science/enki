@@ -4,7 +4,7 @@ import numpy as np
 
 import scipy
 
-from ulmo.enki import enki_utils
+from enki import utils as enki_utils
 
 from IPython import embed
 

@@ -1029,6 +1029,9 @@ def fig_dineof(outfile='fig_dineof.png',
             items = [orig_imgs[idx], mask_imgs[idx]]
             recon_imgs[idx] = simple_inpaint(items)
 
+        # Save for Peter
+        np.save(f'recon_biharm_p{p}.npy', recon_imgs)
+
         return simple_rmse(recon_imgs, mask_imgs)
 
     rmses = []
