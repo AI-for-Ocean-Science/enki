@@ -18,7 +18,7 @@ from ulmo import io as ulmo_io
 from ulmo.preproc import plotting as pp_plotting
 from ulmo.utils import catalog as cat_utils
 from ulmo.scripts import grab_llc
-from ulmo.scripts import enki_reconstruct
+from enki.scripts import enki_reconstruct
 from ulmo.mae import patch_analysis
 
 from IPython import embed

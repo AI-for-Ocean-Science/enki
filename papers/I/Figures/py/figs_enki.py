@@ -977,7 +977,7 @@ def fig_dineof(outfile='fig_dineof.png',
                     patch_sz:int=4):
         crecon_imgs = recon_imgs[:,patch_sz:-patch_sz, patch_sz:-patch_sz]
         cmask_imgs  = mask_imgs[:,patch_sz:-patch_sz, patch_sz:-patch_sz]
-        corig_imgs  = orig_imgs[:,patch_sz:-patch_sz, patch_sz:-patch_sz]
+        corig_imgs  = orig_imgs[:mask_imgs.shape[0],patch_sz:-patch_sz, patch_sz:-patch_sz]
 
         calc = (crecon_imgs - corig_imgs)*cmask_imgs
         calc = calc**2
@@ -1013,6 +1013,9 @@ def fig_dineof(outfile='fig_dineof.png',
         recon_imgs = np.asarray(f_enki['valid'][:,0,...])
         f_mask = h5py.File(mask_file, 'r')
         mask_imgs = np.asarray(f_mask['valid'][:,0,...])
+        # Cut
+        recon_imgs = recon_imgs[:128]
+        mask_imgs = mask_imgs[:128]
 
         return simple_rmse(recon_imgs, mask_imgs)
 
@@ -1030,7 +1033,11 @@ def fig_dineof(outfile='fig_dineof.png',
             recon_imgs[idx] = simple_inpaint(items)
 
         # Save for Peter
-        np.save(f'recon_biharm_p{p}.npy', recon_imgs)
+        #np.save(f'recon_biharm_p{p}.npy', recon_imgs)
+
+        # Cut
+        recon_imgs = recon_imgs[:128]
+        mask_imgs = mask_imgs[:128]
 
         return simple_rmse(recon_imgs, mask_imgs)
 
