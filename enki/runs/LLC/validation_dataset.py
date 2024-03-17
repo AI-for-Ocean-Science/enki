@@ -15,9 +15,8 @@ from ulmo.analysis import evaluate as ulmo_evaluate
 from ulmo.preproc import plotting as pp_plotting
 from ulmo.utils import catalog as cat_utils
 
-from ulmo.mae import analysis as enki_analysis
-from ulmo.mae import cutout_analysis
-from ulmo.mae import enki_utils
+from enki import analysis as enki_analysis
+from enki import cutout_analysis
 
 from IPython import embed
 
@@ -235,10 +234,12 @@ def main(flg):
     # Inpainting galore
     if flg & (2**4):
         for t, p in zip([10,20], [10,30]):
-            inpaint(t, p, 'LLC2_nonoise', 'biharmonic', debug=False)#, rmse_clobber=False, clobber=False)
-            inpaint(t, p, 'LLC2_nonoise', 'grid_nearest', debug=False)#, rmse_clobber=False)
-            inpaint(t, p, 'LLC2_nonoise', 'grid_linear', debug=False)#, rmse_clobber=False)
-            inpaint(t, p, 'LLC2_nonoise', 'grid_cubic', debug=False)#, rmse_clobber=False)
+            if t !=20 and p != 30:
+                continue
+            inpaint(t, p, 'LLC2_nonoise', 'biharmonic', debug=True, rmse_clobber=True, clobber=True)
+            #inpaint(t, p, 'LLC2_nonoise', 'grid_nearest', debug=False)#, rmse_clobber=False)
+            #inpaint(t, p, 'LLC2_nonoise', 'grid_linear', debug=False)#, rmse_clobber=False)
+            #inpaint(t, p, 'LLC2_nonoise', 'grid_cubic', debug=False)#, rmse_clobber=False)
 
 # Command line execution
 if __name__ == '__main__':

@@ -184,22 +184,24 @@ def simple_inpaint(items:list,
 
     Args:
         items (list): 
-            List of [img, mask]
+            List of [img, mask, index]
             Built this way for multi-processing
         inpaint_type (str, optional): 
             Inpainting type.  Defaults to 'biharmonic'.
             biharmonic : sk_inpaint.inpaint_biharmonic
 
     Returns:
-        np.ndarray: Inpainted image
+        tuple: 
+            np.ndarray: Inpainted image
+            int: index
     """
     # Unpack
-    img, mask = items
+    img, mask, idx = items
 
     # Do it
     if inpaint_type == 'biharmonic':
         return sk_inpaint.inpaint_biharmonic(
-            img, mask, channel_axis=None)
+            img, mask, channel_axis=None), idx
     elif inpaint_type[0:4] == 'grid':
         flavor = inpaint_type.split('_')[1]
         unmasked = np.where(mask == 0)
@@ -211,7 +213,7 @@ def simple_inpaint(items:list,
                                    np.arange(img.shape[1]), 
                                    indexing='ij')
         # Do it
-        return griddata((x_pts, y_pts), vals, (all_x, all_y), method=flavor) 
+        return griddata((x_pts, y_pts), vals, (all_x, all_y), method=flavor), idx
     else:
         raise IOError("Bad inpainting type")
 
@@ -242,8 +244,10 @@ def inpaint_images(inpaint_file:str,
         dataset, t, p)
     print(f"Inpainting {orig_file} with {method}")
 
+    print(f"Loading original images from {orig_file}")
     f_orig = h5py.File(orig_file, 'r')
     #f_recon = h5py.File(recon_file,'r')
+    print(f"Loading mask images from {mask_file}")
     f_mask = h5py.File(mask_file,'r')
 
     if debug:
@@ -268,27 +272,33 @@ def inpaint_images(inpaint_file:str,
 
     nloop = nfiles // nsub_files + ((nfiles % nsub_files) > 0)
     inpainted = []
+    indices = []
     for kk in range(nloop):
-        i0 = kk*nsub_files
         i0 = kk*nsub_files
         i1 = min((kk+1)*nsub_files, nfiles)
         print('Files: {}:{} of {}'.format(i0, i1, nfiles))
-        sub_files = [(orig_imgs[ii,...], mask_imgs[ii,...]) for ii in range(i0, i1)]
+        sub_files = [(orig_imgs[ii,...], mask_imgs[ii,...], ii) for ii in range(i0, i1)]
         with ProcessPoolExecutor(max_workers=n_cores) as executor:
             chunksize = len(
                 sub_files) // n_cores if len(sub_files) // n_cores > 0 else 1
             answers = list(tqdm(executor.map(map_fn, sub_files,
                                                 chunksize=chunksize), total=len(sub_files)))
         # Save
-        inpainted.append(np.array(answers))
+        inpainted.append(np.array([a[0] for a in answers]))
+        indices.append(np.array([a[1] for a in answers]))
     # Collate
     inpainted = np.concatenate(inpainted)
+    indices = np.concatenate(indices)
+
+    # Check
+    if debug:
+        embed(header='296 of cutout_analysis.py')
 
     # Save
     if not debug:
         with h5py.File(inpaint_file, 'w') as f:
             # Validation
-            f.create_dataset('inpainted', data=inpainted.astype(np.float32))
+            f.create_dataset('inpainted', data=inpainted.astype(np.float32)[indices])
         print(f'Wrote: {inpaint_file}')
     else:
         embed(header='297 of cutout_analysis.py')
