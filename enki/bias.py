@@ -54,7 +54,7 @@ def load_bias_table():
         pandas.DataFrame: table of bias values
     """
     bias_file = os.path.join(
-            resource_filename('ulmo', 'runs'),
-            'Enki', 'Masters', 'enki_bias_LLC.csv')
+            resource_filename('enki', 'runs'),
+            'Masters', 'enki_bias_LLC.csv')
     bias = pandas.read_csv(bias_file)
     return bias

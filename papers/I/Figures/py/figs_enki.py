@@ -27,6 +27,7 @@ from enki import utils
 from enki import patch_analysis
 from enki import plotting as enki_plotting
 from enki.cutout_analysis import rms_images, simple_inpaint
+from enki import bias
 
 try:
     from enki import models_mae
@@ -730,7 +731,8 @@ def fig_rmse_models(outfile='fig_rmse_models.png', ax=None, rmse=None, models=No
     ax.set_axisbelow(True)
     ax.grid(color='gray', linestyle='dashed', linewidth = 0.5)
     fsz = 17
-    plt.legend(labels=plt_labels, title='Training Percentile ('+stper+')',
+    plt.legend(labels=plt_labels, 
+               title='Training Percentile ('+stper+')',
                 title_fontsize=fsz+1, fontsize=fsz, fancybox=True)
     #plt.xlabel("Training Ratio")
     plt.xlabel("Patch Masking Percentile ("+smper+")")
@@ -1077,6 +1079,49 @@ def fig_dineof(outfile='fig_dineof.png',
     plt.close()
     print(f'Wrote: {outfile}')
 
+def fig_bias(filepath='enki_bias_LLC.csv', outfile='fig_biases.png'):
+    biases = bias.load_bias_table()
+
+    #colors = ['b','g','m','c']
+    models = [10,20,35,50,75]
+    x = [10,20,30,40,50]
+    
+    fig, ax = plt.subplots(figsize=(10,8))
+    plt_labels = []
+    
+    #embed(header='1093 of figs')
+    for i in range(len(models)):
+        mtt = biases.t == models[i]
+        plt_labels.append(stper+f'={models[i]}')
+        ax.scatter(x, biases['median'][mtt], #color=colors[i], 
+                   zorder=i+2, s=35)
+
+    #plt_labels.append('0 bias')
+    #x = np.linspace(0, 55, 50)
+    #y = np.zeros(50)
+    #ax.plot(x,y,c='r',linestyle='dashed',linewidth=0.8,zorder=1)
+        
+    ax.set_axisbelow(True)
+    ax.grid(color='gray', linestyle='dashed', linewidth = 0.5)
+    plt.legend(labels=plt_labels, 
+               title='Training Percentile',
+               title_fontsize=15, 
+               fontsize=15, fancybox=True)
+    #plt.title('Calculated Biases')
+    plt.xlabel("Patch Masking Percentile ("+smper+")")
+    plt.ylabel("Bias (K)")
+    plt.xlim([5, 55])
+    
+    # Font sizes
+    plotting.set_fontsize(ax, 19)
+    
+    # save
+    plt.savefig(outfile, dpi=300)
+    plt.close()
+    plt.close()
+    print(f'Wrote: {outfile}')
+    return
+
 #### ########################## #########################
 def main(flg_fig):
     if flg_fig == 'all':
@@ -1170,6 +1215,9 @@ def main(flg_fig):
         fig_viirs_reconstruct()
         #fig_viirs_reconstruct(p=30)
 
+    # Bias
+    if flg_fig & (2 ** 10):
+        fig_bias()
 
 # Command line execution
 if __name__ == '__main__':
@@ -1178,7 +1226,7 @@ if __name__ == '__main__':
         flg_fig = 0
         #flg_fig += 2 ** 0  # patches
         #flg_fig += 2 ** 1  # cutouts
-        flg_fig += 2 ** 2  # LLC RMSE (Enki vs inpainting) [Figure 4]
+        #flg_fig += 2 ** 2  # LLC RMSE (Enki vs inpainting) [Figure 4]
         #flg_fig += 2 ** 3  # Reconstruction example
         #flg_fig += 2 ** 4  # VIIRS RMSE vs LLC
         #flg_fig += 2 ** 5  # Check valid 2
@@ -1186,6 +1234,7 @@ if __name__ == '__main__':
         #flg_fig += 2 ** 7  # Compare Enki against many inpainting
         #flg_fig += 2 ** 8  # DINEOF
         #flg_fig += 2 ** 9  # VIIRS Reconstructions
+        flg_fig += 2 ** 10  # Bias
     else:
         flg_fig = sys.argv[1]
 
