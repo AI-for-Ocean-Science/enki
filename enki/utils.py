@@ -21,7 +21,7 @@ def load_bias(tp:tuple=None, bias_path:str=None, dataset:str='LLC2_nonoise'):
         if dataset == 'VIIRS':
             dataset = 'LLC2_nonoise'
         bias_path = os.path.join(resources.files('enki'), 'runs',
-            'Enki', 'Masters', f'enki_bias_{dataset}.csv')
+            'Masters', f'enki_bias_{dataset}.csv')
     # Load
     print(f"Loading bias table from {bias_path}")
     bias = pandas.read_csv(bias_path)

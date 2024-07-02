@@ -27,6 +27,7 @@ from enki import utils
 from enki import patch_analysis
 from enki import plotting as enki_plotting
 from enki.cutout_analysis import rms_images, simple_inpaint
+from enki import bias as enki_bias
 
 try:
     from enki import models_mae
@@ -178,30 +179,30 @@ def fig_viirs_reconstruct(outfile:str='fig_viirs_reconstruct.png', t:int=20,
 
 def fig_patches(outfile:str, patch_file:str, model:str='std'):
     print(f"Using: {patch_file}")
-    lsz = 16.
 
+    lsz = 17.
     fig = plt.figure(figsize=(12,7))
     plt.clf()
-    #gs = gridspec.GridSpec(4,8)
+    gs = gridspec.GridSpec(4,8)
 
-    '''
     # Spatial
     ax0 = plt.subplot(gs[:,0:4])
     fig_patch_ij_binned_stats('std_diff', 'median',
                               patch_file, in_ax=ax0)
     ax0.set_title('(a)', fontsize=lsz, color='k', loc='left')
-    '''
+
     # Spatial
 
     # RMSE
-    ax1 = fig_patch_rmse(patch_file, model=model, outfile=outfile)
-    #ax1.set_title('(b)', fontsize=lsz, color='k', loc='left')
+    ax1 = fig_patch_rmse(patch_file, in_ax=gs, model=model)
+    #ax1 = fig_patch_rmse(patch_file, model=model, outfile=outfile)
+    ax1.set_title('(b)', fontsize=lsz, color='k', loc='left')
 
     # Finish
-    #plt.tight_layout(pad=0.0, h_pad=0.0, w_pad=0.3)
-    #plt.savefig(outfile, dpi=300)
-    #plt.close()
-    #print('Wrote {:s}'.format(outfile))
+    plt.tight_layout(pad=0.0, h_pad=0.0, w_pad=0.3)
+    plt.savefig(outfile, dpi=300)
+    plt.close()
+    print('Wrote {:s}'.format(outfile))
 
 
 def fig_cutouts(outfile:str):
@@ -215,7 +216,7 @@ def fig_cutouts(outfile:str):
     ax0 = plt.subplot(gs[0])
     rmse = figs_rmse_vs_LL(ax=ax0, models=models)
 
-    lsz = 16.
+    lsz = 18.
     ax0.set_title('(a)', fontsize=lsz, color='k')
 
     # RMSE
@@ -224,7 +225,7 @@ def fig_cutouts(outfile:str):
     ax1.set_title('(b)', fontsize=lsz, color='k')
 
     # Finish
-    plt.tight_layout(pad=0.05, h_pad=0.1, w_pad=0.3)
+    plt.tight_layout()#pad=0.05, h_pad=0.1, w_pad=0.3)
     plt.savefig(outfile, dpi=300)
     plt.close()
     print('Wrote {:s}'.format(outfile))
@@ -304,10 +305,12 @@ def fig_patch_ij_binned_stats(metric:str,
         plt.savefig(outfile, dpi=300)
         plt.close()
         print('Wrote {:s}'.format(outfile))
+    else:
+        plotting.set_fontsize(ax, 14)
 
 
 def fig_patch_rmse(patch_file:str, in_ax=None, outfile:str=None, 
-                   other_patch_files:list=None,
+                   other_patch_files:list=None, fsz:float=18.,
                    lbls:list=None, show_model:bool=True,
                    tp:tuple=None, model:str='std'):
     """ Binned stats for patches
@@ -391,6 +394,7 @@ def fig_patch_rmse(patch_file:str, in_ax=None, outfile:str=None,
         keep = tbl.stdT > 0.
         ax_hist.hist(np.log10(tbl.stdT.values[keep]), bins=100, density=True, color='b')#, alpha=0.5)
         plt.setp(ax_hist.get_xticklabels(), visible=False)
+        plotting.set_fontsize(ax_hist, fsz)
 
 
     # Axes
@@ -401,7 +405,6 @@ def fig_patch_rmse(patch_file:str, in_ax=None, outfile:str=None,
     ax.set_ylim(lims[0], lims[1])
 
     # Labeling
-    fsz = 17.
     ax.text(0.05, 0.9, stper+f'={t_per}, '+smper+f'={p_per}',
             transform=ax.transAxes,
               fontsize=fsz, ha='left', color='k')
@@ -570,7 +573,7 @@ def fig_llc_inpainting(outfile:str, t:int, p:int,
     # RMS_biharmonic vs. RMS_Enki
     if single:
         ax2 = plt.subplot(gs[0])
-        fsz = 19.
+        fsz = 21.
     else:
         ax2 = plt.subplot(gs[3])
         fsz = 15.
@@ -585,8 +588,8 @@ def fig_llc_inpainting(outfile:str, t:int, p:int,
     ax2.set_xscale('log')
     cbaxes = plt.colorbar(scat)#, pad=0., fraction=0.030)
     #cbaxes.set_label(r'$\log_{10} \, \Delta T$ (K)', fontsize=17.)
-    cbaxes.set_label(r'$LL_{\rm Ulmo}$', fontsize=17.)
-    cbaxes.ax.tick_params(labelsize=15)
+    cbaxes.set_label(r'$LL_{\rm Ulmo}$', fontsize=21.)
+    cbaxes.ax.tick_params(labelsize=19)
     ax2.text(0.95, 0.05, stper+f'={t}, '+smper+f'={p}',
             transform=ax2.transAxes,
               fontsize=fsz, ha='right', color='k')
@@ -621,13 +624,14 @@ def fig_llc_inpainting(outfile:str, t:int, p:int,
 
     # Polish
     #fg.ax.minorticks_on()
-    lsz = 21 if single else 14
+    lsz = 23 if single else 14
     for ax in axes:
         plotting.set_fontsize(ax, lsz)
 
     #plt.title(f'Enki vs. Inpaiting: t={t}, p={p}')
 
     # Finish
+    plt.tight_layout()
     plt.savefig(outfile, dpi=300)
     plt.close()
     print('Wrote {:s}'.format(outfile))
@@ -718,19 +722,25 @@ def fig_rmse_models(outfile='fig_rmse_models.png', ax=None, rmse=None, models=No
     # plot
     for i in range(len(models)):
         avg_RMSEs = []
+        std_RMSEs = []
         for p, c in zip(masks, colors):
             y = rmse['rms_t{t}_p{p}'.format(t=models[i], p=p)]
             avg_RMSE = np.mean(y)
+            std_RMSE = np.std(y)
             avg_RMSEs.append(avg_RMSE)
+            std_RMSEs.append(std_RMSE)
         # Plot
         plt_labels.append(stper+f'={models[i]}')
-        plt.plot(masks, avg_RMSEs, 's', ms=10, color=colors[i])
+        #plt.plot(masks, avg_RMSEs, 's', ms=10, color=colors[i])
+        # Error bars
+        plt.errorbar(masks, avg_RMSEs, yerr=std_RMSEs, fmt='s', ms=10, color=colors[i])
 
     ax.set_ylim([0, 0.25])
     ax.set_axisbelow(True)
     ax.grid(color='gray', linestyle='dashed', linewidth = 0.5)
     fsz = 17
-    plt.legend(labels=plt_labels, title='Training Percentile ('+stper+')',
+    plt.legend(labels=plt_labels, 
+               title='Training Percentile',
                 title_fontsize=fsz+1, fontsize=fsz, fancybox=True)
     #plt.xlabel("Training Ratio")
     plt.xlabel("Patch Masking Percentile ("+smper+")")
@@ -806,7 +816,7 @@ def fig_viirs_rmse(outfile='fig_viirs_rmse.png',
         y_llc_quad = np.sqrt(np.array(y_llc)**2 + 0.03**2)
         plt.scatter(x_llc, y_llc_quad, marker='o', color='r', label='LLC Enki + VIIRS noise')
         
-    fsz = 21
+    fsz = 23
     plt.legend(title_fontsize=fsz+1, fontsize=fsz, 
                fancybox=True)
     #plt.title('Training Percentile: t={}'.format(models[i]))
@@ -948,16 +958,17 @@ def fig_llc_many_inpainting(outfile='fig_llc_many_inpainting.png',
         plt.scatter(x_llc, y_llc, marker=marker, label=lbl)
 
         
-    fsz = 17
+    fsz = 20
     plt.legend(title_fontsize=fsz+1, fontsize=fsz, 
                fancybox=True)
     #plt.title('Training Percentile: t={}'.format(models[i]))
     plt.xlabel(r"Median $LL_{\rm Ulmo}$")
     plt.ylabel("Average RMSE (K)")
 
-    plotting.set_fontsize(ax, 19)
+    plotting.set_fontsize(ax, 23)
     ax.grid(color='gray', linestyle='dashed', linewidth = 0.5)
                          
+    plt.tight_layout()
     plt.savefig(outfile, dpi=300)
     plt.close()
     print(f'Wrote: {outfile}')
@@ -1077,6 +1088,51 @@ def fig_dineof(outfile='fig_dineof.png',
     plt.close()
     print(f'Wrote: {outfile}')
 
+def fig_bias(filepath='enki_bias_LLC.csv', outfile='fig_biases.png'):
+    biases = utils.load_bias()
+    #biases = enki_bias.load_bias_table()
+
+    #colors = ['b','g','m','c']
+    models = [10,20,35]#,50,75]
+    x = [10,20,30,40,50]
+    
+    fig, ax = plt.subplots(figsize=(10,8))
+    plt_labels = []
+    
+    #embed(header='1093 of figs')
+    for i in range(len(models)):
+        mtt = biases.t == models[i]
+        plt_labels.append(stper+f'={models[i]}')
+        ax.scatter(x, biases['median'][mtt], #color=colors[i], 
+                   zorder=i+2, s=35)
+
+    #plt_labels.append('0 bias')
+    #x = np.linspace(0, 55, 50)
+    #y = np.zeros(50)
+    #ax.plot(x,y,c='r',linestyle='dashed',linewidth=0.8,zorder=1)
+        
+    ax.set_axisbelow(True)
+    ax.grid(color='gray', linestyle='dashed', linewidth = 0.5)
+    plt.legend(labels=plt_labels, 
+               title='Training Percentile',
+               title_fontsize=17, 
+               fontsize=17, fancybox=True)
+    #plt.title('Calculated Biases')
+    plt.xlabel("Patch Masking Percentile ("+smper+")")
+    plt.ylabel("Bias (K)")
+    plt.xlim([5, 55])
+    
+    # Font size
+    plotting.set_fontsize(ax, 21)
+    
+    # save
+    plt.tight_layout()
+    plt.savefig(outfile, dpi=300)
+    plt.close()
+    plt.close()
+    print(f'Wrote: {outfile}')
+    return
+
 #### ########################## #########################
 def main(flg_fig):
     if flg_fig == 'all':
@@ -1170,22 +1226,26 @@ def main(flg_fig):
         fig_viirs_reconstruct()
         #fig_viirs_reconstruct(p=30)
 
+    # Bias
+    if flg_fig & (2 ** 10):
+        fig_bias()
 
 # Command line execution
 if __name__ == '__main__':
 
     if len(sys.argv) == 1:
         flg_fig = 0
-        #flg_fig += 2 ** 0  # patches
-        #flg_fig += 2 ** 1  # cutouts
-        flg_fig += 2 ** 2  # LLC RMSE (Enki vs inpainting) [Figure 4]
-        #flg_fig += 2 ** 3  # Reconstruction example
-        #flg_fig += 2 ** 4  # VIIRS RMSE vs LLC
+        #flg_fig += 2 ** 0  # patches [Figure 4]
+        #flg_fig += 2 ** 1  # cutouts [Figure 6]
+        #flg_fig += 2 ** 2  # LLC RMSE (Enki vs inpainting) [Figure 9]
+        #flg_fig += 2 ** 3  # Reconstruction example [Figure 2]
+        #flg_fig += 2 ** 4  # VIIRS RMSE vs LLC [Figure 10]
         #flg_fig += 2 ** 5  # Check valid 2
         #flg_fig += 2 ** 6  # More patch figures
-        #flg_fig += 2 ** 7  # Compare Enki against many inpainting
+        #flg_fig += 2 ** 7  # Compare Enki against many inpainting [Figure 8]
         #flg_fig += 2 ** 8  # DINEOF
         #flg_fig += 2 ** 9  # VIIRS Reconstructions
+        #flg_fig += 2 ** 10  # Bias [Figure 3]
     else:
         flg_fig = sys.argv[1]
 

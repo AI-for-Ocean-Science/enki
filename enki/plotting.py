@@ -160,6 +160,7 @@ def plot_recon_four(orig_img:np.ndarray, recon_img:np.ndarray,
 
     _, cm = plotting.load_palette()
     cbar_kws={'label': 'SSTa (K)',
+              #'labelsize': 12., 
               'fraction': 0.0450,
               'location': 'top'}
 
@@ -250,6 +251,7 @@ def plot_recon_four(orig_img:np.ndarray, recon_img:np.ndarray,
             cbar = ax.collections[0].colorbar
             cbar.ax.tick_params(labelsize=9)
 
+
     # Borders
     # 
     for ax, title in zip( [ax0, ax1, ax2 ,ax3],
@@ -258,7 +260,7 @@ def plot_recon_four(orig_img:np.ndarray, recon_img:np.ndarray,
         ax.patch.set_linewidth(1.)  
         #
         if show_title:
-            ax.set_title(title, fontsize=14, y=-0.13)
+            ax.set_title(title, fontsize=16, y=-0.13)
     
     if outfile is not None:
         plt.tight_layout(pad=0.5, h_pad=0.5, w_pad=0.5)
