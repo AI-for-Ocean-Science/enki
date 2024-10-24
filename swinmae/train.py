@@ -148,11 +148,23 @@ def main(args):
             log_writer=log_writer,
             args=args
         )
+
+        # Save model and upload to s3 storage every epoch
+        # Uploads to s3 storage if rank 0
         if args.output_dir and ((epoch + 1) % args.save_freq == 0 or epoch + 1 == args.epochs):
             misc.save_model(
                 args=args, model=model, model_without_ddp=model_without_ddp, optimizer=optimizer,
                 loss_scaler=loss_scaler, epoch=epoch + 1)
-
+            
+            # create filenames
+            local_file = os.path.join(args.output_dir, 'checkpoint-%s.pth' % (epoch + 1))
+            s3_file = os.path.join("s3://llc/mae", local_file)
+            if local_file[:2] == './':    # remove ./ if hidden output folder
+                s3_file = os.path.join('s3://llc/mae', local_file[2:]) 
+            # upload to s3
+            if args.rank == 0:
+                ulmo_io.upload_file_to_s3(local_file, s3_file)
+        
         log_stats = {**{f'train_{k}': v for k, v in train_stats.items()},
                      'epoch': epoch, }
 
@@ -161,11 +173,24 @@ def main(args):
                 log_writer.flush()
             with open(os.path.join(args.output_dir, "log.txt"), mode="a", encoding="utf-8") as f:
                 f.write(json.dumps(log_stats) + "\n")
+        
+        # upload and update log file per epoch
+        log_file = os.path.join(args.output_dir, 'log.txt')
+        s3_log_file = os.path.join('s3://llc/mae', log_file)
+        if log_file[:2] == './':    # remove ./ if hidden folder
+            s3_log_file = os.path.join('s3://llc/mae', log_file[2:]) 
+        if args.rank == 0:
+            ulmo_io.upload_file_to_s3(log_file, s3_log_file)
 
+    total_time = time.time() - start_time
+    total_time_str = str(datetime.timedelta(seconds=int(total_time)))
+    print('Training time {}'.format(total_time_str))
 
 if __name__ == '__main__':
     arg = get_args_parser()
     arg = arg.parse_args()
     if arg.output_dir:
         Path(arg.output_dir).mkdir(parents=True, exist_ok=True)
+    # I think this works now. Any errors spat out by this is cause something later in the code failed.
+    world_size = torch.cuda.device_count()
     main(arg)
