@@ -158,9 +158,9 @@ def main(args):
             
             # create filenames
             local_file = os.path.join(args.output_dir, 'checkpoint-%s.pth' % (epoch + 1))
-            s3_file = os.path.join("s3://llc/mae", local_file)
+            s3_file = os.path.join("s3://llc/swin_mae", local_file)
             if local_file[:2] == './':    # remove ./ if hidden output folder
-                s3_file = os.path.join('s3://llc/mae', local_file[2:]) 
+                s3_file = os.path.join('s3://llc/swin_mae', local_file[2:]) 
             # upload to s3
             if args.rank == 0:
                 ulmo_io.upload_file_to_s3(local_file, s3_file)
@@ -176,9 +176,9 @@ def main(args):
         
         # upload and update log file per epoch
         log_file = os.path.join(args.output_dir, 'log.txt')
-        s3_log_file = os.path.join('s3://llc/mae', log_file)
+        s3_log_file = os.path.join('s3://llc/swin_mae', log_file)
         if log_file[:2] == './':    # remove ./ if hidden folder
-            s3_log_file = os.path.join('s3://llc/mae', log_file[2:]) 
+            s3_log_file = os.path.join('s3://llc/swin_mae', log_file[2:]) 
         if args.rank == 0:
             ulmo_io.upload_file_to_s3(log_file, s3_log_file)
 
